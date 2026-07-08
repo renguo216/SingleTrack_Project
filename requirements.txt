@@ -1,0 +1,33 @@
+# 单目标跟踪方法与智能分析系统
+# 安装方式: pip install -r requirements.txt
+# Python 版本: 3.8+
+
+# ----- 深度学习框架 -----
+torch>=1.7.0
+torchvision>=0.8.0
+
+# ----- 图像处理与计算机视觉 -----
+opencv-python>=4.5.0
+numpy>=1.19.0
+scipy>=1.5.0
+
+# ----- Web 后端 -----
+flask>=2.0.0
+flask-socketio>=5.0.0
+python-socketio>=5.0.0
+werkzeug>=2.0.0
+
+# ----- 深度学习工具 -----
+got10k>=0.1.0          # SiamFC 数据集加载与实验基准
+yacs>=0.1.8            # SiamRPN++ 配置管理
+tensorboardX>=2.0      # 训练日志
+cython>=0.29           # SiamRPN++ region 编译
+
+# ----- 可视化与工具 -----
+matplotlib>=3.3.0
+tqdm>=4.50.0
+pyyaml>=5.4.0
+colorama>=0.4.0
+
+# ----- 图像处理辅助 -----
+pillow>=8.0.0

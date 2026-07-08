@@ -1,0 +1,65 @@
+data:
+  input_path: "data/inputs/"
+  output_path: "data/outputs/"
+  model_path: "data/models/"
+  database_path: "data/tracking.db"
+
+tracker:
+  traditional:
+    frame_diff:
+      diff_threshold: 30
+      min_contour_area: 100
+      kernel_size: 5
+    background_subtraction:
+      history: 500
+      var_threshold: 16
+      detect_shadows: false
+    color_threshold:
+      hsv_lower: [0, 43, 46]
+      hsv_upper: [10, 255, 255]
+      min_contour_area: 50
+      kernel_size: 3
+    edge_contour:
+      canny_low: 50
+      canny_high: 150
+      gaussian_kernel: 5
+      min_contour_area: 100
+      kernel_size: 3
+    meanshift:
+      histogram_bins: 16
+      search_window_scale: 1.5
+    camshift:
+      histogram_bins: 16
+      search_window_scale: 1.5
+    kcf:
+      feature_type: "hog"
+      learning_rate: 0.01
+    csrt:
+      padding: 2
+      learning_rate: 0.005
+      scale_step: 1.05
+
+  deep:
+    siamfc:
+      template_size: 127
+      search_size: 255
+      stride: 8
+      model_path: "data/models/siamfc.pth"
+    siamrpn:
+      template_size: 127
+      search_size: 255
+      model_path: "data/models/siamrpn++.pth"
+
+evaluation:
+  iou_threshold: 0.5
+  center_error_threshold: 20
+  success_threshold: 0.5
+
+server:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(module)s: %(message)s"

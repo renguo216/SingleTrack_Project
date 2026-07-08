@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单目标跟踪方法与智能分析系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <header><h1>🎯 单目标跟踪方法与智能分析系统</h1></header>
+
+    <!-- 选择页 -->
+    <div id="pageSelect" class="page-select">
+        <div class="select-card" onclick="openModal('upload')">
+            <div class="card-icon">📹</div>
+            <div class="card-title">方案一：自上传视频分析</div>
+            <div class="card-desc">上传视频，框选目标，选择算法，实时跟踪分析</div>
+        </div>
+        <div class="select-card" onclick="openModal('otb')">
+            <div class="card-icon">📋</div>
+            <div class="card-title">方案二：预设OTB分析</div>
+            <div class="card-desc">使用内置OTB数据集，自动GT，直接选择算法跟踪</div>
+        </div>
+    </div>
+
+    <!-- 模态框1：自上传 -->
+    <div id="modalUpload" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📹 自上传视频分析</h2>
+                <span class="modal-close" onclick="closeModal('upload')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-step">
+                    <span class="step-num">1</span>
+                    <label>上传视频：</label>
+                    <input type="file" id="upVideoInput" accept="video/*">
+                    <button id="upUploadBtn" class="btn btn-sm">上传</button>
+                    <span id="upVideoStatus" style="font-size:12px;color:#888;margin-left:8px;">未选择</span>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">2</span>
+                    <label>选择算法：</label>
+                    <select id="upAlgoSelect"><option value="">-- 请选择 --</option></select>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">3</span>
+                    <label>框选首帧目标：</label>
+                    <span id="upBboxStatus">未选择</span>
+                    <button id="upBboxBtn" class="btn btn-sm" disabled>框选</button>
+                    <button id="upCancelBboxBtn" class="btn btn-sm btn-warning" style="display:none;">取消</button>
+                </div>
+                <div class="modal-preview">
+                    <canvas id="upCanvas"></canvas>
+                    <div class="modal-hint" id="upHint">请先上传视频</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="upStartBtn" class="btn btn-primary" disabled>▶ 开始跟踪</button>
+                <button class="btn btn-secondary" onclick="closeModal('upload')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框2：OTB -->
+    <div id="modalOtb" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 预设OTB分析</h2>
+                <span class="modal-close" onclick="closeModal('otb')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="modal-step">
+                    <span class="step-num">1</span>
+                    <label>选择OTB视频：</label>
+                    <select id="otbVideoSelect"><option value="">-- 请选择 --</option></select>
+                    <button id="otbLoadBtn" class="btn btn-sm">加载</button>
+                    <span id="otbStatus" style="font-size:12px;color:#888;margin-left:8px;">未选择</span>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">2</span>
+                    <label>选择算法：</label>
+                    <select id="otbAlgoSelect"><option value="">-- 请选择 --</option></select>
+                </div>
+                <div class="modal-step">
+                    <span class="step-num">3</span>
+                    <label>GT标注：</label>
+                    <span id="otbGtStatus" style="color:#2ecc71;">✅ 已内置GT</span>
+                    <input type="file" id="otbGtInput" accept=".txt" style="display:none;">
+                    <button id="otbGtBtn" class="btn btn-sm">替换GT</button>
+                </div>
+                <div class="modal-preview">
+                    <canvas id="otbCanvas"></canvas>
+                    <div class="modal-hint" id="otbHint">请先加载OTB视频</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="otbStartBtn" class="btn btn-primary" disabled>▶ 开始跟踪</button>
+                <button class="btn btn-secondary" onclick="closeModal('otb')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 播放页（自上传） ===== -->
+    <div id="playerUpload" style="display:none;">
+        <div class="player-header">
+            <span id="puTitle">🎯 跟踪进行中...</span>
+            <button class="btn btn-secondary" onclick="backToSelect()">← 返回</button>
+        </div>
+        <div class="main-content">
+            <div class="video-section">
+                <div class="video-container"><canvas id="puCanvas"></canvas></div>
+                <div class="video-info">
+                    <span id="puFrame">帧: 0/0</span>
+                    <span id="puFps">FPS: 0</span>
+                    <span id="puAlgo">算法: --</span>
+                </div>
+                <div class="timeline-container">
+                    <div class="timeline-track"><canvas id="puTL"></canvas><div class="timeline-slider" id="puTLS"><div class="slider-head"></div></div><div id="puStrip" class="tl-strip"></div></div>
+                    <div class="timeline-ctrl">
+                        <span id="puTLL">帧 0</span>
+                        <input type="range" id="puTLR" min="0" max="100" value="0" class="tl-range">
+                        <span id="puTLT">/ 0</span>
+                        <span id="puTLS_">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="metrics-section">
+                <div class="metrics-panel">
+                    <h3>📊 实时指标</h3>
+                    <div class="metric-item"><span class="ml">FPS:</span><span class="mv" id="puMFps">--</span></div>
+                    <div class="metric-item"><span class="ml">帧:</span><span class="mv" id="puMFr">0/0</span></div>
+                </div>
+                <div class="chart-panel"><h3>📈 FPS曲线</h3><canvas id="puFpsChart"></canvas></div>
+            </div>
+        </div>
+        <div class="summary-panel" id="puSummary" style="display:none;">
+            <h2>📋 跟踪结果汇总</h2>
+            <div class="summary-grid" id="puGrid"></div>
+            <div id="puFinalCharts" style="margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 播放页（OTB） ===== -->
+    <div id="playerOtb" style="display:none;">
+        <div class="player-header">
+            <span id="poTitle">🎯 跟踪进行中...</span>
+            <button class="btn btn-secondary" onclick="backToSelect()">← 返回</button>
+        </div>
+        <div class="main-content">
+            <div class="video-section">
+                <div class="video-container"><canvas id="poCanvas"></canvas></div>
+                <div class="video-info">
+                    <span id="poFrame">帧: 0/0</span>
+                    <span id="poFps">FPS: 0</span>
+                    <span id="poAlgo">算法: --</span>
+                </div>
+                <div class="timeline-container">
+                    <div class="timeline-track"><canvas id="poTL"></canvas><div class="timeline-slider" id="poTLS"><div class="slider-head"></div></div><div id="poStrip" class="tl-strip"></div></div>
+                    <div class="timeline-ctrl">
+                        <span id="poTLL">帧 0</span>
+                        <input type="range" id="poTLR" min="0" max="100" value="0" class="tl-range">
+                        <span id="poTLT">/ 0</span>
+                        <span id="poTLS_">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="metrics-section">
+                <div class="metrics-panel">
+                    <h3>📊 实时指标</h3>
+                    <div class="metric-item"><span class="ml">IoU:</span><span class="mv" id="poMIoU">--</span><div class="pbar"><div id="poMIoUB" style="width:0%"></div></div></div>
+                    <div class="metric-item"><span class="ml">CLE:</span><span class="mv" id="poMCLE">--</span></div>
+                    <div class="metric-item"><span class="ml">FPS:</span><span class="mv" id="poMFps">--</span></div>
+                    <div class="metric-item"><span class="ml">帧:</span><span class="mv" id="poMFr">0/0</span></div>
+                </div>
+                <div class="chart-panel"><h3>📈 IoU曲线</h3><canvas id="poIouChart"></canvas></div>
+                <div class="chart-panel"><h3>📈 CLE曲线</h3><canvas id="poCleChart"></canvas></div>
+                <div class="chart-panel"><h3>📈 FPS曲线</h3><canvas id="poFpsChart"></canvas></div>
+            </div>
+        </div>
+        <div class="summary-panel" id="poSummary" style="display:none;">
+            <h2>📋 跟踪结果汇总</h2>
+            <div class="summary-grid" id="poGrid"></div>
+            <div id="poFinalCharts" style="margin-top:12px;"></div>
+        </div>
+    </div>
+</div>
+    <script src="js/app.js?v=20260704"></script>
+</body>
+</html>
